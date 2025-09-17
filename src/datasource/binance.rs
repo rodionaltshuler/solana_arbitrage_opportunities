@@ -8,7 +8,7 @@ use url::Url;
 use crate::datasource::datasource::DataSource;
 use crate::datasource::quote::{BestQuote, Exchange, Instrument, QuoteUpdate};
 
-const BINANCE_FEE: f64 = 0.00013500;
+pub(crate) const BINANCE_FEE: f64 = 0.00013500;
 
 #[derive(Debug, Deserialize)]
 struct BinanceBookTicker {

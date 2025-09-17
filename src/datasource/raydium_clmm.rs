@@ -63,7 +63,7 @@ pub struct RaydiumClmmSource {
     owner_program_str: Option<String>,
 
     // cached static config
-    fee_rate: f64,  // as fraction, e.g. 0.0001 = 1 bps
+    pub(crate) fee_rate: f64,  // as fraction, e.g. 0.0001 = 1 bps
 }
 
 impl RaydiumClmmSource {

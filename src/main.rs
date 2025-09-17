@@ -41,12 +41,17 @@ async fn main() -> Result<()> {
 
     while let Some(update) = combined.next().await {
         if update.exchange.name == "RAYDIUM_CLMM" {
+            println!("[Quote] [RAYDIUM] {:?}", update);
             last_raydium = Some(update.clone());
         } else if update.exchange.name == "BINANCE" {
+            //println!("[Quote] [BINANCE] {:?}", update);
             last_binance = Some(update.clone());
         }
 
-        let checker = ArbitrageChecker::new(0.01);
+        let checker = ArbitrageChecker::new(0.01,
+                                            datasource_raydium.fee_rate,
+                                            datasource::binance::BINANCE_FEE);
+
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
             checker.check(
                 datasource_raydium.exchange(),
