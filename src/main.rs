@@ -1,4 +1,5 @@
 mod datasource;
+mod arbitrage;
 
 use anyhow::Result;
 use futures::{StreamExt, stream::select};
@@ -6,7 +7,7 @@ use crate::datasource::quote::{Exchange, Instrument, QuoteUpdate};
 use crate::datasource::raydium_clmm::RaydiumClmmSource;
 use crate::datasource::datasource::DataSource;
 use crate::datasource::binance::BinanceSource;
-
+use crate::arbitrage::arbitrage_checker::ArbitrageChecker;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,55 +46,16 @@ async fn main() -> Result<()> {
             last_binance = Some(update.clone());
         }
 
+        let checker = ArbitrageChecker::new(0.01);
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
-            check_arbitrage(
+            checker.check(
                 datasource_raydium.exchange(),
                 raydium_quote_update,
                 datasource_binance.exchange(),
-                binance_quote_update);
+                binance_quote_update,
+            );
         }
     }
 
     Ok(())
-}
-
-fn check_arbitrage(
-    first_exchange: &Exchange,
-    first: &QuoteUpdate,
-    second_exchange: &Exchange,
-    second: &QuoteUpdate,
-) {
-    let diff_buy_first_sell_second = second.best_quote.bid_price - first.best_quote.ask_price;
-    let diff_buy_second_sell_first = first.best_quote.bid_price - second.best_quote.ask_price;
-
-    // Opportunity timestamp = older of the two quotes
-    let opp_ts = first.ts.min(second.ts);
-    let now_ms = chrono::Utc::now().timestamp_millis();
-    let staleness = now_ms - opp_ts;
-
-    if diff_buy_first_sell_second > 0.1 {
-        println!(
-            "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}",
-            opp_ts,
-            staleness,
-            first_exchange.name,
-            first.best_quote.ask_price,
-            second_exchange.name,
-            second.best_quote.bid_price,
-            diff_buy_first_sell_second
-        );
-    }
-
-    if diff_buy_second_sell_first > 0.1 {
-        println!(
-            "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}",
-            opp_ts,
-            staleness,
-            second_exchange.name,
-            second.best_quote.ask_price,
-            first_exchange.name,
-            first.best_quote.bid_price,
-            diff_buy_second_sell_first
-        );
-    }
 }
