@@ -80,6 +80,7 @@ impl RaydiumClmmSource {
         let rpc_client = RpcClient::new(rpc_url.to_string());
         let pool_pk = Pubkey::from_str(pool_pubkey_str)?;
 
+        println!("Fetching Raydium pool config to get fees info");
         let acc = rpc_client.get_account(&pool_pk).await?;
         let mut data: &[u8] = &acc.data;
         let pool_state: PoolStateHead = PoolStateHead::deserialize(&mut data)?;
@@ -89,6 +90,7 @@ impl RaydiumClmmSource {
         let cfg: AmmConfig = AmmConfig::deserialize(&mut data_cfg)?;
 
         let fee_rate = (cfg.trade_fee_rate as f64) / 1_000_000.0;
+        println!("Raydium pool's fee rate is {}", fee_rate);
 
         Ok(Self {
             ws_url: ws_url.to_string(),
