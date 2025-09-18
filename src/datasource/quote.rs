@@ -31,7 +31,7 @@ pub struct BestQuote {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuoteUpdate {
     pub ts: i64,
-    pub exchange: Venue,
+    pub venue: Venue,
     pub instrument: Instrument,
     pub best_quote: BestQuote,
     pub fee_rate: f64

@@ -17,9 +17,9 @@ impl ArbitrageChecker {
 
     pub fn check(
         &self,
-        first_exchange: &Venue,
+        first_venue: &Venue,
         first: &QuoteUpdate,
-        second_exchange: &Venue,
+        second_venue: &Venue,
         second: &QuoteUpdate,
     ) {
         let diff_buy_first_sell_second = second.best_quote.bid_price - first.best_quote.ask_price;
@@ -36,9 +36,9 @@ impl ArbitrageChecker {
                 "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}, Fees {:.4}",
                 opp_ts,
                 staleness,
-                first_exchange.name,
+                first_venue.name,
                 first.best_quote.ask_price,
-                second_exchange.name,
+                second_venue.name,
                 second.best_quote.bid_price,
                 diff_buy_first_sell_second,
                 total_fee * first.best_quote.ask_price,
@@ -50,9 +50,9 @@ impl ArbitrageChecker {
                 "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}, Fees {:.4}",
                 opp_ts,
                 staleness,
-                second_exchange.name,
+                second_venue.name,
                 second.best_quote.ask_price,
-                first_exchange.name,
+                first_venue.name,
                 first.best_quote.bid_price,
                 diff_buy_second_sell_first,
                 total_fee * second.best_quote.ask_price,

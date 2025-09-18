@@ -3,7 +3,7 @@ mod arbitrage;
 
 use anyhow::Result;
 use futures::{StreamExt, stream::select};
-use crate::datasource::quote::{Venue, Instrument, QuoteUpdate};
+use crate::datasource::quote::{Instrument, QuoteUpdate};
 use crate::datasource::raydium_clmm::RaydiumClmmSource;
 use crate::datasource::datasource::DataSource;
 use crate::datasource::binance::BinanceSource;
@@ -40,10 +40,10 @@ async fn main() -> Result<()> {
     let mut last_binance: Option<QuoteUpdate> = None;
 
     while let Some(update) = combined.next().await {
-        if update.exchange.name == "RAYDIUM_CLMM" {
+        if update.venue.name == "RAYDIUM_CLMM" {
             println!("[Quote] [RAYDIUM] {:?}", update);
             last_raydium = Some(update.clone());
-        } else if update.exchange.name == "BINANCE" {
+        } else if update.venue.name == "BINANCE" {
             //println!("[Quote] [BINANCE] {:?}", update);
             last_binance = Some(update.clone());
         }

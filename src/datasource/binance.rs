@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use futures::{StreamExt, stream::BoxStream};
 use serde::Deserialize;
 use tokio_tungstenite::connect_async;
-use url::Url;
 
 use crate::datasource::datasource::DataSource;
 use crate::datasource::quote::{BestQuote, Venue, Instrument, QuoteUpdate};
@@ -55,11 +54,11 @@ impl DataSource for BinanceSource {
         let (ws_stream, _) = connect_async(url.to_string()).await?;
         let (_write, read) = ws_stream.split();
 
-        let exchange = self.venue.clone();
+        let venue = self.venue.clone();
         let instrument_owned = instrument.clone();
 
         let stream = read.filter_map(move |msg| {
-            let exchange = exchange.clone();
+            let venue = venue.clone();
             let instrument = instrument_owned.clone();
             async move {
                 let msg = msg.ok()?;
@@ -75,7 +74,7 @@ impl DataSource for BinanceSource {
 
                 Some(QuoteUpdate {
                     ts: ts_ms,
-                    exchange: exchange.clone(),
+                    venue: venue.clone(),
                     instrument: instrument.clone(),
                     best_quote: BestQuote {
                         bid_price,

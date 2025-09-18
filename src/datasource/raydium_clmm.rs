@@ -31,7 +31,6 @@ pub struct RaydiumClmmSource {
     half_spread_bps: f64,
     venue: Venue,
 
-    // cached static config
     pub(crate) fee_rate: f64,  // as fraction, e.g. 0.0001 = 1 bps
 }
 
@@ -41,7 +40,7 @@ impl RaydiumClmmSource {
         rpc_url: &str,
         ws_url: &str,
         pool_pubkey_str: &str,
-        exchange_name: &str,
+        venue_name: &str,
     ) -> Result<Self> {
 
         let program_id = raydium_clmm::ID;
@@ -65,7 +64,7 @@ impl RaydiumClmmSource {
         Ok(Self {
             ws_url: ws_url.to_string(),
             pool_pubkey: pool_pk,
-            venue: Venue { name: exchange_name.to_string() },
+            venue: Venue { name: venue_name.to_string() },
             fee_rate,
             half_spread_bps: 2.0, // or configurable
         })
@@ -85,7 +84,7 @@ impl DataSource for RaydiumClmmSource {
     ) -> Result<BoxStream<'static, QuoteUpdate>> {
         let ws_url = self.ws_url.clone();
         let pool_pk = self.pool_pubkey;
-        let exchange = self.venue.clone();
+        let venue = self.venue.clone();
         let instrument_clone = instrument.clone();
         let half_spread_bps = self.half_spread_bps;
         let fee_rate = self.fee_rate;
@@ -155,7 +154,7 @@ impl DataSource for RaydiumClmmSource {
 
                 yield QuoteUpdate {
                     ts: ts_ms,
-                    exchange: exchange.clone(),
+                    venue: venue.clone(),
                     instrument: instrument_clone.clone(),
                     best_quote: BestQuote {
                         bid_price: bid,
