@@ -1,3 +1,4 @@
+use crate::arbitrage::arbitrage_opportunity::ArbitrageOpportunity;
 use crate::datasource::domain::{Venue, QuoteUpdate};
 
 pub struct ArbitrageChecker {
@@ -21,42 +22,49 @@ impl ArbitrageChecker {
         first: &QuoteUpdate,
         second_venue: &Venue,
         second: &QuoteUpdate,
-    ) {
-        let diff_buy_first_sell_second = second.best_quote.bid_price - first.best_quote.ask_price;
-        let diff_buy_second_sell_first = first.best_quote.bid_price - second.best_quote.ask_price;
+    ) -> Vec<ArbitrageOpportunity> {
+        let mut opportunities = Vec::new();
 
         let opp_ts = first.ts.min(second.ts);
         let now_ms = chrono::Utc::now().timestamp_millis();
         let staleness = now_ms - opp_ts;
-
         let total_fee = self.fee_first + self.fee_second;
 
-        if diff_buy_first_sell_second > self.min_spread {
-            println!(
-                "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}, Fees {:.4}",
-                opp_ts,
-                staleness,
-                first_venue.name,
-                first.best_quote.ask_price,
-                second_venue.name,
-                second.best_quote.bid_price,
-                diff_buy_first_sell_second,
-                total_fee * first.best_quote.ask_price,
-            );
+        // --- Case 1: Buy first, Sell second ---
+        let spread1 = second.best_quote.bid_price - first.best_quote.ask_price;
+        if spread1 > self.min_spread {
+            let trade_size = first.best_quote.ask_size.min(second.best_quote.bid_size);
+
+            opportunities.push(ArbitrageOpportunity {
+                ts: opp_ts,
+                staleness_ms: staleness,
+                buy_venue: first_venue.name.clone(),
+                sell_venue: second_venue.name.clone(),
+                buy_price: first.best_quote.ask_price,
+                sell_price: second.best_quote.bid_price,
+                spread: spread1,
+                total_fee: total_fee * first.best_quote.ask_price,
+                trade_size,
+            });
         }
 
-        if diff_buy_second_sell_first > self.min_spread {
-            println!(
-                "[Arb] ts={} staleness={}ms | Buy {} @ {:.4}, Sell {} @ {:.4}, Spread {:.4}, Fees {:.4}",
-                opp_ts,
-                staleness,
-                second_venue.name,
-                second.best_quote.ask_price,
-                first_venue.name,
-                first.best_quote.bid_price,
-                diff_buy_second_sell_first,
-                total_fee * second.best_quote.ask_price,
-            );
+        // --- Case 2: Buy second, Sell first ---
+        let spread2 = first.best_quote.bid_price - second.best_quote.ask_price;
+        if spread2 > self.min_spread {
+            let trade_size = second.best_quote.ask_size.min(first.best_quote.bid_size);
+
+            opportunities.push(ArbitrageOpportunity {
+                ts: opp_ts,
+                staleness_ms: staleness,
+                buy_venue: second_venue.name.clone(),
+                sell_venue: first_venue.name.clone(),
+                buy_price: second.best_quote.ask_price,
+                sell_price: first.best_quote.bid_price,
+                spread: spread2,
+                total_fee: total_fee * second.best_quote.ask_price,
+                trade_size,
+            });
         }
+        opportunities
     }
 }

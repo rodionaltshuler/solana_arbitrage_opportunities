@@ -6,7 +6,7 @@ use futures::{StreamExt, stream::select};
 use crate::datasource::domain::{Instrument, QuoteUpdate};
 use crate::datasource::raydium_clmm::RaydiumClmmSource;
 use crate::datasource::datasource::DataSource;
-use crate::datasource::binance::BinanceSource;
+use crate::datasource::binance::{BinanceSource, BINANCE_FEE};
 use crate::arbitrage::arbitrage_checker::ArbitrageChecker;
 
 #[tokio::main]
@@ -33,11 +33,11 @@ async fn main() -> Result<()> {
 
     let arbitrage = ArbitrageChecker::new(0.01,
                                           datasource_raydium.fee_rate,
-                                          BinanceSource::BINANCE_FEE);
+                                          BINANCE_FEE);
 
     while let Some(update) = combined.next().await {
         if update.venue.name == "RAYDIUM_CLMM" {
-            println!("[Quote] [RAYDIUM] {:?}", update);
+            //println!("[Quote] [RAYDIUM] {:?}", update);
             last_raydium = Some(update.clone());
         } else if update.venue.name == "BINANCE" {
             //println!("[Quote] [BINANCE] {:?}", update);
@@ -45,12 +45,15 @@ async fn main() -> Result<()> {
         }
 
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
-            arbitrage.check(
+            let opportunities = arbitrage.check(
                 datasource_raydium.venue(),
                 raydium_quote_update,
                 datasource_binance.venue(),
                 binance_quote_update,
             );
+            for o in opportunities.iter() {
+                println!("{}", o)
+            }
         }
     }
 

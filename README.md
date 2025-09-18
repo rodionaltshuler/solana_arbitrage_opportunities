@@ -17,15 +17,15 @@ Pool-id: 8EzbUfvcRT1Q6RL462ekGkgqbxsPmwC5FMLQZhSPMjJ3
 The current implementation connects to both Raydium CLMM on Solana and Binance via WebSocket, subscribes to live price updates, and monitors for potential arbitrage opportunities.****__
  
 - **RaydiumClmmSource** subscribes to a CLMM pool account, fetches AMM config to get fee data, and derives a bid/ask price and liquidity at these prices within current tick. 
-- **BinanceSource** connects to Binance’s `bookTicker` stream to get the latest best bid/ask prices.
+- **BinanceSource** connects to Binance’s `depth5@100ms` stream to get best available bid/ask prices and corresponding liquidity (possible trade sizes)
 - Both streams are merged, the most recent quotes are cached, and an `ArbitrageChecker` compares the two exchanges to detect price spreads exceeding a configurable threshold.
 
-- Each detected opportunity is logged with timestamp, spread, and quote staleness.  
+- Each detected opportunity is logged with timestamp, spread, quote staleness, fee (per unit of base currency) and possible trade size.  
 
 
 Output example:
 ```
-[Arb] ts=1758105620456 staleness=11960ms | Buy RAYDIUM_CLMM @ 234.5436, Sell BINANCE @ 234.5600, Spread 0.0164, Fees 0.1255
+[Arb] ts=1758219382799 staleness=5604ms | Buy RAYDIUM_CLMM @ 250.9866, Sell BINANCE @ 251.1200, Spread 0.1334, Fees 0.1343, Size 13.8726
 ```
 
 ### Pre-requisites
@@ -44,14 +44,3 @@ cargo run
 
 - *idls*: interface definition language) fetched for Raydium Pool using fetch_idl.sh.
 - *src*: program code
- 
-
-### Improvements Required
-
-1. **BinanceSource**  
-   Current implementation only fetches the latest tick (`bookTicker`).  
-   Improvement: integrate L2 order book stream instead, as this would be more appropriate for identifying real opportunities to buy/sell an asset and for evaluating available depth.
-
-2. **Arbitrage checker**
-   Currently we obtain max liquidity at bid/ask level from Raydium CLMM (within current tick).
-   When we have same info from Binance, we need to add the smallest amount of these two to use as possible arbitrage trade size.

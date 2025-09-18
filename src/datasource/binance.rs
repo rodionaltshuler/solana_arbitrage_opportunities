@@ -9,20 +9,13 @@ use crate::datasource::domain::{BestQuote, Venue, Instrument, QuoteUpdate};
 
 pub(crate) const BINANCE_FEE: f64 = 0.00013500;
 
-#[derive(Deserialize)]
-struct BinanceBookTicker {
-    #[serde(rename = "u")]
-    pub update_id: u64,
-    #[serde(rename = "s")]
-    pub symbol: String,
-    #[serde(rename = "b")]
-    pub bid_price: String,
-    #[serde(rename = "B")]
-    pub bid_qty: String,
-    #[serde(rename = "a")]
-    pub ask_price: String,
-    #[serde(rename = "A")]
-    pub ask_qty: String,
+/// Binance L2 orderbook update (depth5)
+#[derive(Deserialize, Debug)]
+struct BinanceDepth {
+    #[serde(rename = "lastUpdateId")]
+    pub last_update_id: u64,
+    pub bids: Vec<[String; 2]>,
+    pub asks: Vec<[String; 2]>,
 }
 
 pub struct BinanceSource {
@@ -30,9 +23,6 @@ pub struct BinanceSource {
 }
 
 impl BinanceSource {
-
-    pub(crate) const BINANCE_FEE: f64 = 0.00013500;
-
     pub fn new(venue_name: &str) -> Self {
         Self {
             venue: Venue { name: venue_name.to_string() },
@@ -50,10 +40,11 @@ impl DataSource for BinanceSource {
         &self,
         instrument: Instrument,
     ) -> Result<BoxStream<'static, QuoteUpdate>> {
+        // Binance wants lowercase symbols
         let symbol = format!("{}{}", instrument.base.to_lowercase(), instrument.quote.to_lowercase());
-        let url = format!("wss://stream.binance.com:9443/ws/{}@bookTicker", symbol);
+        let url = format!("wss://stream.binance.com:9443/ws/{}@depth5@100ms", symbol);
 
-        let (ws_stream, _) = connect_async(url.to_string()).await?;
+        let (ws_stream, _) = connect_async(url).await?;
         let (_write, read) = ws_stream.split();
 
         let venue = self.venue.clone();
@@ -65,12 +56,27 @@ impl DataSource for BinanceSource {
             async move {
                 let msg = msg.ok()?;
                 let txt = msg.into_text().ok()?;
-                let parsed: BinanceBookTicker = serde_json::from_str(&txt).ok()?;
 
-                let bid_price: f64 = parsed.bid_price.parse().ok()?;
-                let bid_size: f64 = parsed.bid_qty.parse().ok()?;
-                let ask_price: f64 = parsed.ask_price.parse().ok()?;
-                let ask_size: f64 = parsed.ask_qty.parse().ok()?;
+                //println!("BINANCE MSG: {}", txt);
+                if !txt.trim_start().starts_with('{') {
+                    return None;
+                }
+                
+                let parsed: BinanceDepth = match serde_json::from_str(&txt) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("binance parse error: {e} | raw: {txt}");
+                        return None;
+                    }
+                };
+
+                let best_bid = parsed.bids.get(0)?;
+                let bid_price: f64 = best_bid[0].parse().ok()?;
+                let bid_size: f64 = best_bid[1].parse().ok()?; // in base (SOL)
+
+                let best_ask = parsed.asks.get(0)?;
+                let ask_price: f64 = best_ask[0].parse().ok()?;
+                let ask_size: f64 = best_ask[1].parse().ok()?; // in base (SOL)
 
                 let ts_ms = chrono::Utc::now().timestamp_millis();
 
@@ -84,7 +90,7 @@ impl DataSource for BinanceSource {
                         ask_price,
                         ask_size,
                     },
-                    fee_rate: BinanceSource::BINANCE_FEE
+                    fee_rate: BINANCE_FEE,
                 })
             }
         });
