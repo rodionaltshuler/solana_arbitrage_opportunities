@@ -16,7 +16,7 @@ Pool-id: 8EzbUfvcRT1Q6RL462ekGkgqbxsPmwC5FMLQZhSPMjJ3
 
 The current implementation connects to both Raydium CLMM on Solana and Binance via WebSocket, subscribes to live price updates, and monitors for potential arbitrage opportunities.****__
  
-- **RaydiumClmmSource** subscribes to a CLMM pool account, fetches AMM config to get fee data, decodes the pool state, and derives a synthetic bid/ask from the on-chain price. 
+- **RaydiumClmmSource** subscribes to a CLMM pool account, fetches AMM config to get fee data, and derives a bid/ask price and liquidity at these prices within current tick. 
 - **BinanceSource** connects to Binance’s `bookTicker` stream to get the latest best bid/ask prices.
 - Both streams are merged, the most recent quotes are cached, and an `ArbitrageChecker` compares the two exchanges to detect price spreads exceeding a configurable threshold.
 
@@ -52,6 +52,6 @@ cargo run
    Current implementation only fetches the latest tick (`bookTicker`).  
    Improvement: integrate L2 order book stream instead, as this would be more appropriate for identifying real opportunities to buy/sell an asset and for evaluating available depth.
 
-2. **Raydium**  
-   Current version derives bid/ask prices manually from the mid price (sqrt_price_x64) and does not analyze depth or slippage.  
-   Improvement: enhance the implementation to read tick arrays (TickArrayState subscription?) and compute realistic liquidity depth and slippage for trades.
+2. **Arbitrage checker**
+   Currently we obtain max liquidity at bid/ask level from Raydium CLMM (within current tick).
+   When we have same info from Binance, we need to add the smallest amount of these two to use as possible arbitrage trade size.

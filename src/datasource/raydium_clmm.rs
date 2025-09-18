@@ -39,7 +39,7 @@ impl RaydiumClmmSource {
     const RPC_URL: &'static str = "https://api.mainnet-beta.solana.com";
     const WS_URL: &'static str  = "wss://api.mainnet-beta.solana.com";
     const POOL_PUBKEY: &'static str = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv"; // SOL/USDC
-    
+
     pub async fn new(
         venue_name: &str,
     ) -> Result<Self> {
@@ -71,6 +71,46 @@ impl RaydiumClmmSource {
         })
     }
 
+    fn clmm_tick_quote(
+        sqrt_price_x64: u128,
+        liquidity: u128,
+        tick_current: i32,
+        tick_spacing: u16,
+        base_dec: u8,
+        quote_dec: u8,
+    ) -> (f64, f64, f64, f64) {
+        
+        //println!("sqrt_price_x64: {}, liquidity: {}, tick_current: {}, tick_spacing: {}, base_dec: {}, quote_dec: {}",
+        //    sqrt_price_x64, liquidity, tick_current, tick_spacing, base_dec, quote_dec);
+
+        let s = (sqrt_price_x64 as f64) / (2f64.powi(64));
+        let l = liquidity as f64;
+
+        let exp = base_dec as i32 - quote_dec as i32;
+        let scale = 10f64.powi(exp);
+
+        let tick_lower = (tick_current / tick_spacing as i32) * tick_spacing as i32;
+        let tick_upper = tick_lower + tick_spacing as i32;
+
+        let sqrt_lower = 1.0001f64.powf(tick_lower as f64 / 2.0);
+        let sqrt_upper = 1.0001f64.powf(tick_upper as f64 / 2.0);
+
+        // ASK (buy base with quote, price up until sqrt_upper)
+        let max_quote_in = l * (sqrt_upper - s);
+        let base_out = l * (1.0/s - 1.0/sqrt_upper);
+        let ask_price = (max_quote_in / base_out) * scale;
+
+        // BID (sell base for quote, price down until sqrt_lower)
+        let max_base_in = l * (1.0/sqrt_lower - 1.0/s);
+        let quote_out = l * (s - sqrt_lower);
+        let bid_price = (quote_out / max_base_in) * scale;
+
+        let bid_size = max_base_in / 10f64.powi(base_dec as i32);
+        let ask_size = base_out   / 10f64.powi(base_dec as i32);
+
+        (bid_price, bid_size, ask_price, ask_size)
+    }
+
 }
 
 #[async_trait::async_trait]
@@ -87,7 +127,6 @@ impl DataSource for RaydiumClmmSource {
         let pool_pk = self.pool_pubkey;
         let venue = self.venue.clone();
         let instrument_clone = instrument.clone();
-        let half_spread_bps = self.half_spread_bps;
         let fee_rate = self.fee_rate;
 
         let s = stream! {
@@ -139,29 +178,28 @@ impl DataSource for RaydiumClmmSource {
                     }
                 };
 
-                // derive mid price from sqrt_price_x64
-                let r = (pool_state.sqrt_price_x64 as f64) / (2f64.powi(64));
-                let p_raw = r * r;
-                let scale = 10f64.powi(pool_state.mint_decimals_0 as i32 - pool_state.mint_decimals_1 as i32);
-                let mid = p_raw * scale;
-
-                let spread_frac = half_spread_bps / 10_000.0;
-                let bid = mid * (1.0 - spread_frac);
-                let ask = mid * (1.0 + spread_frac);
-
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH).unwrap();
                 let ts_ms = (now.as_secs() as i64) * 1000 + (now.subsec_millis() as i64);
+
+                let (bid_price, bid_size, ask_price, ask_size) = RaydiumClmmSource::clmm_tick_quote(
+                    pool_state.sqrt_price_x64,
+                    pool_state.liquidity,
+                    pool_state.tick_current,
+                    pool_state.tick_spacing,
+                    pool_state.mint_decimals_0,
+                    pool_state.mint_decimals_1,
+                );
 
                 yield QuoteUpdate {
                     ts: ts_ms,
                     venue: venue.clone(),
                     instrument: instrument_clone.clone(),
                     best_quote: BestQuote {
-                        bid_price: bid,
-                        bid_size: 0.0,
-                        ask_price: ask,
-                        ask_size: 0.0,
+                        bid_price,
+                        bid_size,
+                        ask_price,
+                        ask_size,
                     },
                     fee_rate,
                 };
