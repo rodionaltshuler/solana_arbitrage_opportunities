@@ -6,11 +6,11 @@ use tokio_tungstenite::connect_async;
 use url::Url;
 
 use crate::datasource::datasource::DataSource;
-use crate::datasource::quote::{BestQuote, Exchange, Instrument, QuoteUpdate};
+use crate::datasource::quote::{BestQuote, Venue, Instrument, QuoteUpdate};
 
 pub(crate) const BINANCE_FEE: f64 = 0.00013500;
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 struct BinanceBookTicker {
     #[serde(rename = "u")]
     pub update_id: u64,
@@ -27,22 +27,22 @@ struct BinanceBookTicker {
 }
 
 pub struct BinanceSource {
-    pub exchange: Exchange,
+    pub venue: Venue,
 }
 
 impl BinanceSource {
 
     pub fn new() -> Self {
         Self {
-            exchange: Exchange { name: "BINANCE".to_string() },
+            venue: Venue { name: "BINANCE".to_string() },
         }
     }
 }
 
 #[async_trait]
 impl DataSource for BinanceSource {
-    fn exchange(&self) -> &Exchange {
-        &self.exchange
+    fn venue(&self) -> &Venue {
+        &self.venue
     }
 
     async fn subscribe_best_quotes(
@@ -52,10 +52,10 @@ impl DataSource for BinanceSource {
         let symbol = format!("{}{}", instrument.base.to_lowercase(), instrument.quote.to_lowercase());
         let url = format!("wss://stream.binance.com:9443/ws/{}@bookTicker", symbol);
 
-        let (ws_stream, _) = connect_async(Url::parse(&url)?).await?;
+        let (ws_stream, _) = connect_async(url.to_string()).await?;
         let (_write, read) = ws_stream.split();
 
-        let exchange = self.exchange.clone();
+        let exchange = self.venue.clone();
         let instrument_owned = instrument.clone();
 
         let stream = read.filter_map(move |msg| {

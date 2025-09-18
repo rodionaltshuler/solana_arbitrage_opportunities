@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Exchange {
+pub struct Venue {
     pub name: String
 }
 
@@ -31,7 +31,7 @@ pub struct BestQuote {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuoteUpdate {
     pub ts: i64,
-    pub exchange: Exchange,
+    pub exchange: Venue,
     pub instrument: Instrument,
     pub best_quote: BestQuote,
     pub fee_rate: f64

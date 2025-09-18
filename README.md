@@ -1,4 +1,4 @@
-## Arbitrage opportunity checker between on-chain and centralised exchange
+## Arbitrage opportunity monitor between on-chain and centralised exchange
 
 The program that monitors a market in Solana network and the same market in any CEX in search for arbitrage opportunities across the 2 venues. Connectivity should be done via websockets to both places to get live updates and constantly assess the potential for arbitrage.
 
@@ -42,20 +42,16 @@ cargo run
 
 ### Project folders
 
-- *resources*: IDL (interface definition language) fetched for Raydium Pool using fetch_idl.sh.
+- *idls*: interface definition language) fetched for Raydium Pool using fetch_idl.sh.
 - *src*: program code
  
 
 ### Improvements Required
 
-1. **RaydiumClmmSource**  
-   Current implementation fetches pool state manually and relies on hard-coded schemas and response parsing.  
-   Improvement: rewrite RaydiumClmmSource using the Anchor framework to simplify pool state fetching and avoid manual schema definitions.
-
-2. **BinanceSource**  
+1. **BinanceSource**  
    Current implementation only fetches the latest tick (`bookTicker`).  
    Improvement: integrate L2 order book stream instead, as this would be more appropriate for identifying real opportunities to buy/sell an asset and for evaluating available depth.
 
-3. **Raydium**  
+2. **Raydium**  
    Current version derives bid/ask prices manually from the mid price (sqrt_price_x64) and does not analyze depth or slippage.  
-   Improvement: enhance the implementation to read tick arrays and compute realistic liquidity depth and slippage for trades.
+   Improvement: enhance the implementation to read tick arrays (TickArrayState subscription?) and compute realistic liquidity depth and slippage for trades.

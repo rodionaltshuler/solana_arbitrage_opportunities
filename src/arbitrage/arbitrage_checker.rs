@@ -1,4 +1,4 @@
-use crate::datasource::quote::{Exchange, QuoteUpdate};
+use crate::datasource::quote::{Venue, QuoteUpdate};
 
 pub struct ArbitrageChecker {
     pub min_spread: f64,     // minimum spread in quote currency
@@ -17,9 +17,9 @@ impl ArbitrageChecker {
 
     pub fn check(
         &self,
-        first_exchange: &Exchange,
+        first_exchange: &Venue,
         first: &QuoteUpdate,
-        second_exchange: &Exchange,
+        second_exchange: &Venue,
         second: &QuoteUpdate,
     ) {
         let diff_buy_first_sell_second = second.best_quote.bid_price - first.best_quote.ask_price;

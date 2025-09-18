@@ -1,0 +1,1 @@
+anchor idl fetch CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK --provider.cluster mainnet > raydium_clmm.json

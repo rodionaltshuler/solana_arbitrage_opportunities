@@ -3,7 +3,7 @@ mod arbitrage;
 
 use anyhow::Result;
 use futures::{StreamExt, stream::select};
-use crate::datasource::quote::{Exchange, Instrument, QuoteUpdate};
+use crate::datasource::quote::{Venue, Instrument, QuoteUpdate};
 use crate::datasource::raydium_clmm::RaydiumClmmSource;
 use crate::datasource::datasource::DataSource;
 use crate::datasource::binance::BinanceSource;
@@ -54,9 +54,9 @@ async fn main() -> Result<()> {
 
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
             checker.check(
-                datasource_raydium.exchange(),
+                datasource_raydium.venue(),
                 raydium_quote_update,
-                datasource_binance.exchange(),
+                datasource_binance.venue(),
                 binance_quote_update,
             );
         }
