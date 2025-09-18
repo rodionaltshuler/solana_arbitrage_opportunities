@@ -3,7 +3,7 @@ mod arbitrage;
 
 use anyhow::Result;
 use futures::{StreamExt, stream::select};
-use crate::datasource::quote::{Instrument, QuoteUpdate};
+use crate::datasource::domain::{Instrument, QuoteUpdate};
 use crate::datasource::raydium_clmm::RaydiumClmmSource;
 use crate::datasource::datasource::DataSource;
 use crate::datasource::binance::BinanceSource;
@@ -14,19 +14,11 @@ async fn main() -> Result<()> {
 
     let instrument = Instrument::new("SOL", "USDC");
 
-    let ws_url = "wss://api.mainnet-beta.solana.com";
-    let rpc_url = "https://api.mainnet-beta.solana.com";
-
-    let pool = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv"; // SOL/USDC CLMM pool state
-
-    let datasource_raydium = RaydiumClmmSource::from_pool(
-        rpc_url,
-        ws_url,
-        pool,
+    let datasource_raydium = RaydiumClmmSource::new(
         "RAYDIUM_CLMM",
     ).await?;
 
-    let datasource_binance = BinanceSource::new();
+    let datasource_binance = BinanceSource::new("BINANCE");
 
     let binance_stream = datasource_binance
         .subscribe_best_quotes(instrument.clone()).await?;
@@ -39,6 +31,10 @@ async fn main() -> Result<()> {
     let mut last_raydium: Option<QuoteUpdate> = None;
     let mut last_binance: Option<QuoteUpdate> = None;
 
+    let arbitrage = ArbitrageChecker::new(0.01,
+                                          datasource_raydium.fee_rate,
+                                          BinanceSource::BINANCE_FEE);
+
     while let Some(update) = combined.next().await {
         if update.venue.name == "RAYDIUM_CLMM" {
             println!("[Quote] [RAYDIUM] {:?}", update);
@@ -48,12 +44,8 @@ async fn main() -> Result<()> {
             last_binance = Some(update.clone());
         }
 
-        let checker = ArbitrageChecker::new(0.01,
-                                            datasource_raydium.fee_rate,
-                                            datasource::binance::BINANCE_FEE);
-
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
-            checker.check(
+            arbitrage.check(
                 datasource_raydium.venue(),
                 raydium_quote_update,
                 datasource_binance.venue(),

@@ -1,4 +1,4 @@
-use crate::datasource::quote::{Venue, QuoteUpdate};
+use crate::datasource::domain::{Venue, QuoteUpdate};
 
 pub struct ArbitrageChecker {
     pub min_spread: f64,     // minimum spread in quote currency

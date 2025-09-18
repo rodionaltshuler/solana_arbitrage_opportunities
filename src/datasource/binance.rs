@@ -5,7 +5,7 @@ use serde::Deserialize;
 use tokio_tungstenite::connect_async;
 
 use crate::datasource::datasource::DataSource;
-use crate::datasource::quote::{BestQuote, Venue, Instrument, QuoteUpdate};
+use crate::datasource::domain::{BestQuote, Venue, Instrument, QuoteUpdate};
 
 pub(crate) const BINANCE_FEE: f64 = 0.00013500;
 
@@ -31,9 +31,11 @@ pub struct BinanceSource {
 
 impl BinanceSource {
 
-    pub fn new() -> Self {
+    pub(crate) const BINANCE_FEE: f64 = 0.00013500;
+
+    pub fn new(venue_name: &str) -> Self {
         Self {
-            venue: Venue { name: "BINANCE".to_string() },
+            venue: Venue { name: venue_name.to_string() },
         }
     }
 }
@@ -82,7 +84,7 @@ impl DataSource for BinanceSource {
                         ask_price,
                         ask_size,
                     },
-                    fee_rate: BINANCE_FEE
+                    fee_rate: BinanceSource::BINANCE_FEE
                 })
             }
         });

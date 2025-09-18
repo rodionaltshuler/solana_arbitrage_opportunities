@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
-use crate::datasource::quote::{Venue, Instrument, QuoteUpdate};
+use crate::datasource::domain::{Venue, Instrument, QuoteUpdate};
 
 #[async_trait]
 pub trait DataSource: Send + Sync {

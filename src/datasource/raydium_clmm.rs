@@ -11,7 +11,7 @@ use async_stream::stream;
 use futures::StreamExt;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use crate::datasource::quote::{BestQuote, Venue, Instrument, QuoteUpdate};
+use crate::datasource::domain::{BestQuote, Venue, Instrument, QuoteUpdate};
 
 use anyhow::Result;
 use std::{str::FromStr};
@@ -36,18 +36,19 @@ pub struct RaydiumClmmSource {
 
 impl RaydiumClmmSource {
 
-    pub async fn from_pool(
-        rpc_url: &str,
-        ws_url: &str,
-        pool_pubkey_str: &str,
+    const RPC_URL: &'static str = "https://api.mainnet-beta.solana.com";
+    const WS_URL: &'static str  = "wss://api.mainnet-beta.solana.com";
+    const POOL_PUBKEY: &'static str = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv"; // SOL/USDC
+    
+    pub async fn new(
         venue_name: &str,
     ) -> Result<Self> {
 
         let program_id = raydium_clmm::ID;
-        let pool_pk = Pubkey::from_str(pool_pubkey_str)?;
+        let pool_pk = Pubkey::from_str(Self::POOL_PUBKEY)?;
 
         let client = Client::new_with_options(
-            Cluster::Custom(rpc_url.to_string(), rpc_url.to_string()),
+            Cluster::Custom(Self::RPC_URL.to_string(), Self::RPC_URL.to_string()),
             Rc::new(Keypair::new()),
             CommitmentConfig::processed(),
         );
@@ -62,7 +63,7 @@ impl RaydiumClmmSource {
         println!("Raydium pool's fee rate is {}", fee_rate);
 
         Ok(Self {
-            ws_url: ws_url.to_string(),
+            ws_url: Self::WS_URL.to_string(),
             pool_pubkey: pool_pk,
             venue: Venue { name: venue_name.to_string() },
             fee_rate,
