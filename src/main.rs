@@ -45,14 +45,14 @@ async fn main() -> Result<()> {
         }
 
         if let (Some(raydium_quote_update), Some(binance_quote_update)) = (&last_raydium, &last_binance) {
-            let opportunities = arbitrage.check(
+            let opportunity = arbitrage.check(
                 datasource_raydium.venue(),
                 raydium_quote_update,
                 datasource_binance.venue(),
                 binance_quote_update,
             );
-            for o in opportunities.iter() {
-                println!("{}", o)
+            if let Some(opportunity) = opportunity {
+                println!("{}", opportunity);
             }
         }
     }

@@ -20,7 +20,7 @@ impl Instrument {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub struct BestQuote {
     pub bid_price: f64,
     pub bid_size: f64,
@@ -28,7 +28,7 @@ pub struct BestQuote {
     pub ask_size: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct QuoteUpdate {
     pub ts: i64,
     pub venue: Venue,

@@ -28,7 +28,6 @@ use raydium_clmm::{accounts::{AmmConfig, PoolState}};
 pub struct RaydiumClmmSource {
     ws_url: String,
     pool_pubkey: Pubkey,
-    half_spread_bps: f64,
     venue: Venue,
 
     pub(crate) fee_rate: f64,  // as fraction, e.g. 0.0001 = 1 bps
@@ -66,8 +65,7 @@ impl RaydiumClmmSource {
             ws_url: Self::WS_URL.to_string(),
             pool_pubkey: pool_pk,
             venue: Venue { name: venue_name.to_string() },
-            fee_rate,
-            half_spread_bps: 2.0, // or configurable
+            fee_rate
         })
     }
 

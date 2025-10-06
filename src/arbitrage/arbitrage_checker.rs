@@ -22,8 +22,7 @@ impl ArbitrageChecker {
         first: &QuoteUpdate,
         second_venue: &Venue,
         second: &QuoteUpdate,
-    ) -> Vec<ArbitrageOpportunity> {
-        let mut opportunities = Vec::new();
+    ) -> Option<ArbitrageOpportunity> {
 
         let opp_ts = first.ts.min(second.ts);
         let now_ms = chrono::Utc::now().timestamp_millis();
@@ -32,10 +31,12 @@ impl ArbitrageChecker {
 
         // --- Case 1: Buy first, Sell second ---
         let spread1 = second.best_quote.bid_price - first.best_quote.ask_price;
+
+        let mut result : Option<ArbitrageOpportunity> = None;
         if spread1 > self.min_spread {
             let trade_size = first.best_quote.ask_size.min(second.best_quote.bid_size);
 
-            opportunities.push(ArbitrageOpportunity {
+            result = Some(ArbitrageOpportunity {
                 ts: opp_ts,
                 staleness_ms: staleness,
                 buy_venue: first_venue.name.clone(),
@@ -43,17 +44,18 @@ impl ArbitrageChecker {
                 buy_price: first.best_quote.ask_price,
                 sell_price: second.best_quote.bid_price,
                 spread: spread1,
-                total_fee: total_fee * first.best_quote.ask_price,
+                total_fee: total_fee * first.best_quote.ask_size * first.best_quote.ask_price,
                 trade_size,
             });
         }
 
         // --- Case 2: Buy second, Sell first ---
         let spread2 = first.best_quote.bid_price - second.best_quote.ask_price;
+
         if spread2 > self.min_spread {
             let trade_size = second.best_quote.ask_size.min(first.best_quote.bid_size);
 
-            opportunities.push(ArbitrageOpportunity {
+            result = Some(ArbitrageOpportunity {
                 ts: opp_ts,
                 staleness_ms: staleness,
                 buy_venue: second_venue.name.clone(),
@@ -65,6 +67,8 @@ impl ArbitrageChecker {
                 trade_size,
             });
         }
-        opportunities
+
+        result
+
     }
 }
